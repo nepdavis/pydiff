@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from sklearn.metrics import mean_squared_error
-from math import sqrt, log
-from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 class diffusion:
@@ -51,9 +49,9 @@ class diffusion:
 
         def __bass_model__(self, t, p, q, k):
 
-            ft = k * ((1 - np.exp(-1 * (p + q) * t)) / (1 + (q / p) * np.exp(-1 * (p + q) * t)))
+            np.seterr(over='ignore', invalid='ignore')
 
-            return ft
+            return k * ((1 - np.exp(-1 * (p + q) * t)) / (1 + (q / p) * np.exp(-1 * (p + q) * t)))
 
         def fit(self):
 
@@ -117,7 +115,6 @@ class diffusion:
             self.__differentiate__()
             plt.plot(self.time, self.lst1, 'o', label='data', color='black')
             plt.plot(np.linspace(-1, max(self.time), 1000), self.diff_y_pred, label='fit', color='black')
-            #plt.ylim(0, max(self.diff_y_pred) * 1.1)
             plt.legend(loc='best')
             plt.xlabel('Time')
             plt.ylabel('Saturation by Time-Step')
@@ -135,20 +132,24 @@ class diffusion:
 
         def diagnostics(self):
 
-            rmse = sqrt(mean_squared_error(self.response, self.y_predicted))
-            #chi = chisquare(np.append(self.y_predicted[1:], [1]), np.append(self.response[1:], [1]))
-            #chi = powerdiscrepancy(self.y_predicted, self.response, lambd='freeman_tukey')
-            rsq = r2_score(self.response, self.y_predicted)
-            adjrsq = 1 - ((1 - rsq) * (len(self.time) - 1) / (len(self.time) - 3 - 1))
-
             print('-'*68)
             print('Bass Diffusion Model Diagnostics:\n')
-            print('\nRMSE:                   ', rmse)
-            #print('\nChi Squared Statistic:  ', chi[0])
-            #print('\nChi Square p-value:     ', chi[1])
-            print('\nR-Squared:              ', rsq)
-            print('\nAdj. R-Squared:         ', adjrsq)
-            print('-'*68)
+
+            print('\n{:<24}{:<10}'.format('Metric',
+                                         'Value'))
+
+            print('\n{:<24}{:<10.3f}'.format('RMSE',
+                                         np.sqrt(mean_squared_error(self.response, self.y_predicted))))
+
+            print('\n{:<24}{:<10.4f}'.format('R-Squared',
+                                             r2_score(self.response, self.y_predicted)))
+
+            print('\n{:<24}{:<10.4f}'.format('Adj. R-Squared',
+                                             1 - ((1 - r2_score(self.response, self.y_predicted)) *
+                                                  (len(self.time) - 1) / (len(self.time) - 3 - 1))))
+
+            print('\n{:<24}{:<10.0f}'.format('Df',
+                                             len(self.time)-4))
 
         def results(self):
 
@@ -175,20 +176,20 @@ class diffusion:
                                                                            up_est[1]))
 
             print('\n{:<24}{:<10.2f}{:<10}{:<12.2f}{:<12.2f}'.format('Peak Adoption Time',
-                                                                           (log(self.popt[1]) - log(self.popt[0])) / (self.popt[0] + self.popt[1]),
+                                                                           (np.log(self.popt[1]) - np.log(self.popt[0])) /
+                                                                               (self.popt[0] + self.popt[1]),
                                                                            '',
-                                                                           (log(low_est[1]) - log(low_est[0])) / (low_est[0] + low_est[1]),
-                                                                           (log(up_est[1]) - log(up_est[0])) / (up_est[0] + up_est[1])))
+                                                                           (np.log(low_est[1]) - np.log(low_est[0])) /
+                                                                               (low_est[0] + low_est[1]),
+                                                                           (np.log(up_est[1]) - np.log(up_est[0])) /
+                                                                               (up_est[0] + up_est[1])))
 
             print('\n{:<24}{:<10.2f}{:<10.3f}{:<12.2f}{:<12.2f}'.format('Max. Adopters',
                                                                            self.popt[2],
                                                                            self.perr[2],
                                                                            low_est[2],
                                                                            up_est[2]))
-            #print('\nCoef. of Innovation         ', self.popt[0])
-            #print('\nCoef. of Imitation          ', self.popt[1])
-            #print('\nTime of Peak Adoption             ', (log(self.popt[1]) - log(self.popt[0]))/(self.popt[0]+self.popt[1]))
-            #print('\nTotal Number of Potential Adopters', self.popt[2])
+
             print('-'*68)
 
         def download(self, filename='bass_results', filetype='csv', differentiated=False):
@@ -254,7 +255,7 @@ class diffusion:
 
 
 
-model = diffusion.Bass(filename = 'Red2.txt')
+model = diffusion.Bass(filename = 'ALS.csv')
 model.fit()
 model.predict()
 model.plot_saturation()
